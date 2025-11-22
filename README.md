@@ -2,7 +2,7 @@
 
 A modern, dark-themed calendar application designed for iPad Mini, featuring a real-time clock, monthly calendar view, and event timeline with PostgreSQL integration.
 
-![Event Calendar Preview](public/images/Screenshot%202025-11-23%20at%201.36.28%20AM.png)
+![Event Calendar Preview](public/images/Screenshot.png)
 
 ## Features
 
