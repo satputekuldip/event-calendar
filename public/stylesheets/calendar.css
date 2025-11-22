@@ -65,7 +65,7 @@ body {
 #time-display {
 	/* Switched to system font for reliability on old iOS */
 	font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-	font-size: 150px; /* Larger for wall readability */
+	font-size: 128px; /* Larger for wall readability */
 	font-weight: 700; /* Slightly thicker for old Safari clarity */
 	color: #ffffff;
 	letter-spacing: -1px; /* Reduced compression to avoid glyph overlap */
@@ -116,7 +116,7 @@ body {
 
 #date-display {
 	font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-	font-size: 65px; /* Explicit pixel size */
+	font-size: 56px; /* Explicit pixel size */
 	color: #ff453a;
 	margin-top: 15px;
 	font-weight: 700;
@@ -177,7 +177,7 @@ body {
 
 #calendar-grid th {
 	color: #8e8e93;
-	font-size: 26px;
+	font-size: 22px;
 	text-transform: uppercase;
 	padding-bottom: 10px;
 }
