@@ -134,11 +134,39 @@ body {
 }
 
 #calendar-header {
-	text-align: center;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
 	font-size: 22px;
 	font-weight: bold;
 	margin-bottom: 15px;
 	color: #fff;
+}
+
+#calendar-month-year {
+	flex: 1;
+	text-align: center;
+}
+
+.month-nav-btn {
+	background: #333;
+	border: none;
+	color: #fff;
+	font-size: 32px;
+	font-weight: bold;
+	cursor: pointer;
+	padding: 5px 15px;
+	border-radius: 8px;
+	-webkit-tap-highlight-color: transparent;
+	transition: background-color 0.2s;
+}
+
+.month-nav-btn:active {
+	background: #555;
+}
+
+.month-nav-btn:hover {
+	background: #444;
 }
 
 #calendar-grid {
@@ -160,6 +188,24 @@ body {
 	font-size: 26px;
 	cursor: pointer;
 	color: #fff;
+	position: relative;
+}
+
+#calendar-grid td.calendar-cell {
+	transition: background-color 0.2s;
+}
+
+#calendar-grid td.calendar-cell:active {
+	background-color: rgba(255, 255, 255, 0.1);
+}
+
+#calendar-grid td.selected {
+	background-color: rgba(10, 132, 255, 0.3);
+	border-radius: 8px;
+}
+
+#calendar-grid td.selected .today-cell {
+	background-color: #0a84ff;
 }
 
 .today-cell {

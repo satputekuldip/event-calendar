@@ -60,12 +60,29 @@ function updateClock() {
 setInterval(updateClock, 1000);
 updateClock();
 
+// Calendar State
+var displayedMonth = new Date().getMonth();
+var displayedYear = new Date().getFullYear();
+var selectedDate = null; // Track selected date (YYYY-MM-DD format)
+var todayDate = null; // Track today's date for auto-refresh
+
+// Initialize today's date
+function initTodayDate() {
+	var today = new Date();
+	var y = today.getFullYear();
+	var m = today.getMonth() + 1;
+	var d = today.getDate();
+	todayDate = y + "-" + (m < 10 ? "0" + m : m) + "-" + (d < 10 ? "0" + d : d);
+}
+
+initTodayDate();
+
 // Calendar Render Logic
 function generateCalendar() {
 	var now = new Date();
-	var currentMonth = now.getMonth();
-	var currentYear = now.getFullYear();
 	var today = now.getDate();
+	var todayMonth = now.getMonth();
+	var todayYear = now.getFullYear();
 
 	var months = [
 		"January",
@@ -81,13 +98,15 @@ function generateCalendar() {
 		"November",
 		"December",
 	];
-	document.getElementById("calendar-header").textContent =
-		months[currentMonth] + " " + currentYear;
+	
+	// Update header with navigation
+	var headerText = document.getElementById("calendar-month-year");
+	headerText.textContent = months[displayedMonth] + " " + displayedYear;
 
-	var firstDay = new Date(currentYear, currentMonth, 1).getDay();
+	var firstDay = new Date(displayedYear, displayedMonth, 1).getDay();
 	var daysInMonth = new Date(
-		currentYear,
-		currentMonth + 1,
+		displayedYear,
+		displayedMonth + 1,
 		0
 	).getDate();
 
@@ -104,7 +123,32 @@ function generateCalendar() {
 			} else if (date > daysInMonth) {
 				break;
 			} else {
-				if (date === today) {
+				// Create date string for this cell
+				var cellDateStr = displayedYear + "-" + 
+					((displayedMonth + 1) < 10 ? "0" + (displayedMonth + 1) : (displayedMonth + 1)) + "-" + 
+					(date < 10 ? "0" + date : date);
+				
+				// Check if this is today
+				var isToday = (date === today && displayedMonth === todayMonth && displayedYear === todayYear);
+				// Check if this is selected
+				var isSelected = (selectedDate === cellDateStr);
+				
+				cell.setAttribute("data-date", cellDateStr);
+				cell.className = "calendar-cell";
+				if (isToday) {
+					cell.classList.add("today");
+				}
+				if (isSelected) {
+					cell.classList.add("selected");
+				}
+				
+				// Add click handler
+				cell.addEventListener("click", function() {
+					var clickedDate = this.getAttribute("data-date");
+					selectDate(clickedDate);
+				});
+				
+				if (isToday) {
 					var span = document.createElement("span");
 					span.className = "today-cell";
 					span.innerText = date;
@@ -119,25 +163,54 @@ function generateCalendar() {
 		tbl.appendChild(row);
 	}
 }
+
+// Month Navigation
+function goToPreviousMonth() {
+	displayedMonth--;
+	if (displayedMonth < 0) {
+		displayedMonth = 11;
+		displayedYear--;
+	}
+	generateCalendar();
+}
+
+function goToNextMonth() {
+	displayedMonth++;
+	if (displayedMonth > 11) {
+		displayedMonth = 0;
+		displayedYear++;
+	}
+	generateCalendar();
+}
+
+// Date Selection
+function selectDate(dateStr) {
+	selectedDate = dateStr;
+	generateCalendar(); // Re-render to show selected state
+	fetchEventsForDate(dateStr);
+}
+
+// Initialize calendar and navigation
 generateCalendar();
+
+// Add navigation button handlers
+document.getElementById("prev-month").addEventListener("click", goToPreviousMonth);
+document.getElementById("next-month").addEventListener("click", goToNextMonth);
 
 // --- EVENTS API & TIMELINE LOGIC ---
 
-function fetchEvents() {
-	// Generate date string for today (YYYY-MM-DD)
-	var today = new Date();
-	var y = today.getFullYear();
-	var m = today.getMonth() + 1; // 1-12
-	var d = today.getDate();
-	var dateStr =
-		y +
-		"-" +
-		(m < 10 ? "0" + m : m) +
-		"-" +
-		(d < 10 ? "0" + d : d);
-
+function fetchEventsForDate(dateStr) {
+	// Format date for display
+	var dateObj = new Date(dateStr + "T00:00:00");
+	var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+	var displayDate = months[dateObj.getMonth()] + " " + dateObj.getDate() + ", " + dateObj.getFullYear();
+	
+	// Check if this is today
+	var isToday = (dateStr === todayDate);
+	var subtitleText = isToday ? "Today • " + displayDate : displayDate;
+	
 	document.getElementById("event-subtitle").textContent =
-		"Syncing with Events API...";
+		"Loading events for " + subtitleText + "...";
 
 	var url = API_URL + "/" + dateStr;
 
@@ -174,8 +247,14 @@ function fetchEvents() {
 						});
 					}
 					renderTimeline(data);
+					// Update subtitle with date info
+					var dateObj = new Date(dateStr + "T00:00:00");
+					var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+					var displayDate = months[dateObj.getMonth()] + " " + dateObj.getDate() + ", " + dateObj.getFullYear();
+					var isToday = (dateStr === todayDate);
+					var subtitleText = isToday ? "Today • " + displayDate : displayDate;
 					document.getElementById("event-subtitle").textContent =
-						"Up to date";
+						subtitleText + " • Up to date";
 				} catch (e) {
 					console.error("Error parsing response:", e);
 					document.getElementById("event-subtitle").textContent =
@@ -288,8 +367,19 @@ function formatTimeStr(timeStr) {
 	return h + ":" + m + " " + ampm;
 }
 
-// Initialize
-fetchEvents();
-// Refresh events every minute
-setInterval(fetchEvents, 60000);
+// Initialize - fetch today's events
+fetchEventsForDate(todayDate);
+
+// Auto-refresh: Always refresh to today's events (not selected date)
+function autoRefreshEvents() {
+	// Update today's date in case day changed
+	initTodayDate();
+	// Always fetch today's events for auto-refresh (even if another date is selected)
+	fetchEventsForDate(todayDate);
+	// Re-render calendar to update today's highlight if day changed
+	generateCalendar();
+}
+
+// Refresh events every minute (always for today)
+setInterval(autoRefreshEvents, 60000);
 
