@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+		/>
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta
+			name="apple-mobile-web-app-status-bar-style"
+			content="black-translucent"
+		/>
+		<meta name="format-detection" content="telephone=no" />
+		<title>iPad Mini Calendar</title>
+		<link rel="stylesheet" href="/stylesheets/calendar.css" />
+	</head>
+	<body>
+		<div id="app-container">
+			<!-- LEFT PANEL -->
+			<div id="left-panel">
+				<div id="clock-section">
+					<div id="time-display">
+						<span id="clock-hours"></span
+						><span class="colon">:</span
+						><span id="clock-minutes"></span
+						><span id="clock-ampm" class="ampm"></span>
+					</div>
+					<div id="date-display">Loading...</div>
+				</div>
+				<div id="calendar-section">
+					<div id="calendar-header">Calendar</div>
+					<table id="calendar-grid">
+						<thead>
+							<tr>
+								<th>S</th>
+								<th>M</th>
+								<th>T</th>
+								<th>W</th>
+								<th>T</th>
+								<th>F</th>
+								<th>S</th>
+							</tr>
+						</thead>
+						<tbody id="calendar-body"></tbody>
+					</table>
+				</div>
+			</div>
+
+			<!-- RIGHT PANEL (Timeline) -->
+			<div id="right-panel">
+				<div id="event-header-area">
+					<div id="event-title">Timeline</div>
+					<div id="event-subtitle">Syncing with Events API...</div>
+				</div>
+
+				<div id="timeline-container">
+					<div class="timeline-line"></div>
+					<div id="timeline-content">
+						<!-- JS renders timeline here -->
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script src="/javascripts/calendar.js"></script>
+	</body>
+</html>
