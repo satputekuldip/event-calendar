@@ -1,6 +1,6 @@
 {
 	"name": "event-calendar",
-	"version": "0.0.0",
+	"version": "1.0.1",
 	"private": true,
 	"scripts": {
 		"start": "node ./bin/www",
@@ -11,10 +11,10 @@
 		"cookie-parser": "~1.4.4",
 		"debug": "~2.6.9",
 		"dotenv": "^17.2.3",
-		"ejs": "~2.6.1",
-		"express": "~4.16.1",
+		"ejs": "~3.1.9",
+		"express": "~5.0.0",
 		"http-errors": "~1.6.3",
-		"morgan": "~1.9.1",
+		"morgan": "~1.10.0",
 		"nodemon": "^3.1.11",
 		"pg": "^8.16.3"
 	}
