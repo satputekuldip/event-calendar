@@ -203,7 +203,7 @@ function fetchEventsForDate(dateStr) {
 	// Format date for display
 	var dateObj = new Date(dateStr + "T00:00:00");
 	var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-	var displayDate = months[dateObj.getMonth()] + " " + dateObj.getDate() + ", " + dateObj.getFullYear();
+	var displayDate = CLOCK_DAYS[dateObj.getDay()] + " " + months[dateObj.getMonth()] + " " + dateObj.getDate() + ", " + dateObj.getFullYear();
 	
 	// Check if this is today
 	var isToday = (dateStr === todayDate);
@@ -250,7 +250,7 @@ function fetchEventsForDate(dateStr) {
 					// Update subtitle with date info
 					var dateObj = new Date(dateStr + "T00:00:00");
 					var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-					var displayDate = months[dateObj.getMonth()] + " " + dateObj.getDate() + ", " + dateObj.getFullYear();
+					var displayDate = CLOCK_DAYS[dateObj.getDay()] + " " + months[dateObj.getMonth()] + " " + dateObj.getDate() + ", " + dateObj.getFullYear();
 					var isToday = (dateStr === todayDate);
 					var subtitleText = isToday ? "Today • " + displayDate : displayDate;
 					document.getElementById("event-subtitle").textContent =
