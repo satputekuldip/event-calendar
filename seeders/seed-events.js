@@ -328,9 +328,28 @@ function generateFullSchedule(startDate, endDate) {
 	
 	// Post-process: Ensure ALL events on Sunday are set to all_day: true
 	// EXCEPT Reading and Exercise which should remain time-bound
+	// Also ensure Saturday events are NEVER all_day (they are 5:30-11:30 PM only)
 	events.forEach(event => {
 		const eventDate = new Date(event.date + 'T00:00:00');
-		if (getDayOfWeek(eventDate) === 0) { // Sunday
+		const dayOfWeek = getDayOfWeek(eventDate);
+		
+		// Saturday (day 6) - ensure evening events are NOT all_day
+		if (dayOfWeek === 6) { // Saturday
+			// Saturday evening events should be time-bound (5:30-11:30 PM)
+			// Only Reading and Exercise can be time-bound, all evening activities should have times
+			if (event.title !== 'Reading' && event.title !== 'Exercise') {
+				// Ensure Saturday evening events are NOT all_day
+				event.all_day = false;
+				// If somehow times are missing, set default Saturday times
+				if (!event.start_time || !event.end_time) {
+					event.start_time = '17:30:00';
+					event.end_time = '23:30:00';
+				}
+			}
+		}
+		
+		// Sunday (day 0) - set to all_day except Reading and Exercise
+		if (dayOfWeek === 0) { // Sunday
 			// Don't set Reading and Exercise to all-day - they have specific times
 			if (event.title !== 'Reading' && event.title !== 'Exercise') {
 				event.all_day = true;
