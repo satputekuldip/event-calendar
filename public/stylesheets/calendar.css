@@ -182,6 +182,10 @@ body {
 	padding-bottom: 10px;
 }
 
+#calendar-grid th:first-child {
+	color: #ff453a; /* Red for Sunday */
+}
+
 #calendar-grid td {
 	text-align: center;
 	padding: 10px 0;

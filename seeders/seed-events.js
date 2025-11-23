@@ -1,34 +1,30 @@
 require('dotenv').config();
 const pool = require('../config/database');
 
-/* -----------------------------------------------------------
-   Utility Helpers
------------------------------------------------------------ */
+const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const SUNDAY = 0;
+const SATURDAY = 6;
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+const MILLISECONDS_PER_WEEK = 7 * MILLISECONDS_PER_DAY;
 
 function formatDate(date) {
-	return date.toISOString().split('T')[0];
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
 }
 
 function getDayOfWeek(date) {
-	return date.getDay(); // 0 = Sun
-}
-
-function getNextMonday(startDate) {
-	const date = new Date(startDate);
-	const day = date.getDay();
-	const diff = day === 0 ? 1 : (8 - day);
-	date.setDate(date.getDate() + diff);
-	date.setHours(0, 0, 0, 0);
-	return date;
+	return date.getDay();
 }
 
 function getMondayOfWeek(date) {
-	const d = new Date(date);
-	const day = d.getDay();
-	const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday is day 1
-	d.setDate(diff);
-	d.setHours(0, 0, 0, 0);
-	return d;
+	const dateCopy = new Date(date);
+	const day = dateCopy.getDay();
+	const diff = dateCopy.getDate() - day + (day === 0 ? -6 : 1);
+	dateCopy.setDate(diff);
+	dateCopy.setHours(0, 0, 0, 0);
+	return dateCopy;
 }
 
 function addDays(date, days) {
@@ -37,16 +33,11 @@ function addDays(date, days) {
 	return result;
 }
 
-/* -----------------------------------------------------------
-   Morning Events
------------------------------------------------------------ */
-
 function addMorningEvents(events, date) {
-	const d = formatDate(date);
+	const formattedDate = formatDate(date);
 
-	// Exercise: 8:30–9:00
 	events.push({
-		date: d,
+		date: formattedDate,
 		title: 'Exercise',
 		description: 'Morning exercise',
 		start_time: '08:30:00',
@@ -55,9 +46,8 @@ function addMorningEvents(events, date) {
 		all_day: false
 	});
 
-	// Reading: 9:00–10:00
 	events.push({
-		date: d,
+		date: formattedDate,
 		title: 'Reading',
 		description: 'Morning reading',
 		start_time: '09:00:00',
@@ -68,10 +58,10 @@ function addMorningEvents(events, date) {
 }
 
 function addSundayMorning(events, date) {
-	const d = formatDate(date);
+	const formattedDate = formatDate(date);
 
 	events.push({
-		date: d,
+		date: formattedDate,
 		title: 'Exercise',
 		description: 'Sunday exercise',
 		start_time: '08:30:00',
@@ -81,7 +71,7 @@ function addSundayMorning(events, date) {
 	});
 
 	events.push({
-		date: d,
+		date: formattedDate,
 		title: 'Reading',
 		description: 'Sunday long reading',
 		start_time: '09:30:00',
@@ -91,32 +81,22 @@ function addSundayMorning(events, date) {
 	});
 }
 
-/* -----------------------------------------------------------
-   Evening Events
------------------------------------------------------------ */
-
-function addEvening(events, date, title, start = null, end = null) {
-	const d = formatDate(date);
-	const dow = getDayOfWeek(date);
-
-	// Default evening times
-	let startTime = start;
-	let endTime = end;
+function addEveningEvent(events, date, title, startTime = null, endTime = null) {
+	const formattedDate = formatDate(date);
+	const dayOfWeek = getDayOfWeek(date);
 
 	if (!startTime || !endTime) {
-		if (dow === 6) {
-			// Saturday
+		if (dayOfWeek === SATURDAY) {
 			startTime = '17:30:00';
 			endTime = '23:30:00';
 		} else {
-			// Mon–Fri
 			startTime = '20:30:00';
 			endTime = '23:30:00';
 		}
 	}
 
 	events.push({
-		date: d,
+		date: formattedDate,
 		title,
 		description: title,
 		start_time: startTime,
@@ -126,9 +106,17 @@ function addEvening(events, date, title, start = null, end = null) {
 	});
 }
 
-/* -----------------------------------------------------------
-   Weekly Templates (Clean and EASY to maintain)
------------------------------------------------------------ */
+function addFullDayEvent(events, date, title, priority = 'medium') {
+	events.push({
+		date: formatDate(date),
+		title,
+		description: title,
+		start_time: null,
+		end_time: null,
+		priority,
+		all_day: true
+	});
+}
 
 const WEEK_TEMPLATES = {
 	1: {
@@ -140,17 +128,15 @@ const WEEK_TEMPLATES = {
 		Sat: 'Magic Stack Project Work',
 		Sun: 'Go Outside / Movie'
 	},
-
 	2: {
 		Mon: 'Homelab Project',
 		Tue: 'Homelab Project',
 		Wed: 'Learning Course',
 		Thu: 'Learning Course',
-		Fri: 'Entertainment – Show/Movie', // FIXED (Go Outside removed from Fri)
+		Fri: 'Entertainment – Show/Movie',
 		Sat: 'Go Outside / Movie',
 		Sun: 'Magic Stack Full Day'
 	},
-
 	3: {
 		Mon: 'Drawing / Art',
 		Tue: 'Drawing / Art',
@@ -160,7 +146,6 @@ const WEEK_TEMPLATES = {
 		Sat: 'Magic Stack Project Work',
 		Sun: 'Go Outside / Movie'
 	},
-
 	4: {
 		Mon: 'Homelab Project',
 		Tue: 'Homelab Project',
@@ -172,208 +157,78 @@ const WEEK_TEMPLATES = {
 	}
 };
 
-/* -----------------------------------------------------------
-   Weekly Schedule Generator (for one week)
------------------------------------------------------------ */
-
-function generateWeekSchedule(weekStartDate, weekNumber) {
-	const events = [];
-	const tpl = WEEK_TEMPLATES[weekNumber];
-	const base = weekStartDate;
-
-	// Mon–Sat mornings
-	for (let i = 0; i < 6; i++) {
-		addMorningEvents(events, addDays(base, i));
-	}
-
-	// Sunday morning
-	addSundayMorning(events, addDays(base, 6));
-
-	// Apply evening schedule
-	const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-	for (let i = 0; i < 7; i++) {
-		const dayName = days[i];
-		const date = addDays(base, i);
-		const activity = tpl[dayName];
-
-		if (!activity) continue;
-
-		// Sunday full-day handling
-		if (dayName === 'Sun') {
-			if (activity === 'Magic Stack Full Day') {
-				events.push({
-					date: formatDate(date),
-					title: 'Magic Stack Project Work',
-					description: 'Full day Magic Stack project work',
-					start_time: null,
-					end_time: null,
-					priority: 'high',
-					all_day: true
-				});
-			} else {
-				events.push({
-					date: formatDate(date),
-					title: activity,
-					description: activity,
-					start_time: null,
-					end_time: null,
-					priority: 'medium',
-					all_day: true
-				});
-			}
-		} else {
-			// Mon–Sat evenings
-			addEvening(events, date, activity);
-		}
-	}
-
-	return events;
+function calculateWeekNumber(referenceMonday, currentMonday) {
+	const weeksSinceReference = Math.floor((currentMonday - referenceMonday) / MILLISECONDS_PER_WEEK);
+	return ((weeksSinceReference % 4) + 4) % 4 + 1;
 }
-
-/* -----------------------------------------------------------
-   Full Schedule Generator (from startDate to endDate)
------------------------------------------------------------ */
 
 function generateFullSchedule(startDate, endDate) {
 	const events = [];
-	const today = new Date(startDate);
-	today.setHours(0, 0, 0, 0);
+	const start = new Date(startDate);
+	start.setHours(0, 0, 0, 0);
 	
-	// Get Monday of the current week
-	const currentWeekMonday = getMondayOfWeek(today);
-	
-	// Calculate which week of the 4-week cycle we're in
-	// We'll use a reference point: assume week 1 starts on a known Monday
-	// For simplicity, we'll calculate based on weeks since a reference date
-	const referenceMonday = new Date('2025-01-06'); // A known Monday (week 1)
-	const weeksSinceReference = Math.floor((currentWeekMonday - referenceMonday) / (7 * 24 * 60 * 60 * 1000));
-	const currentWeekNumber = ((weeksSinceReference % 4) + 4) % 4 + 1; // 1-4
-	
-	// Calculate end date (December 31, 2026)
 	const end = new Date(endDate);
 	end.setHours(23, 59, 59, 999);
 	
+	const currentWeekMonday = getMondayOfWeek(start);
+	const referenceMonday = new Date(2025, 0, 6); // January 6, 2025 (month is 0-indexed)
+	referenceMonday.setHours(0, 0, 0, 0);
 	let currentMonday = new Date(currentWeekMonday);
-	let weekNumber = currentWeekNumber;
+	let weekNumber = calculateWeekNumber(referenceMonday, currentWeekMonday);
 	
-	console.log(`Generating events from ${formatDate(today)} to ${formatDate(end)}...`);
+	console.log(`Generating events from ${formatDate(start)} to ${formatDate(end)}...`);
 	console.log(`Starting from week ${weekNumber} of the 4-week cycle (Monday: ${formatDate(currentMonday)})`);
 	
-	// Generate events day by day from today onwards
-	let currentDate = new Date(today);
+	let currentDate = new Date(start);
 	
 	while (currentDate <= end) {
-		const dateDayOfWeek = getDayOfWeek(currentDate);
+		currentDate.setHours(0, 0, 0, 0);
+		const dayOfWeek = getDayOfWeek(currentDate);
 		const weekStartMonday = getMondayOfWeek(currentDate);
 		
-		// If we've moved to a new week, update week number
 		if (weekStartMonday.getTime() !== currentMonday.getTime()) {
 			currentMonday = new Date(weekStartMonday);
 			weekNumber = (weekNumber % 4) + 1;
 		}
 		
-		const tpl = WEEK_TEMPLATES[weekNumber];
-		const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-		const dayName = days[dateDayOfWeek];
+		const template = WEEK_TEMPLATES[weekNumber];
+		const dayName = DAYS_OF_WEEK[dayOfWeek];
 		
-		// Add morning events (Mon-Sat)
-		if (dateDayOfWeek !== 0) {
+		if (dayOfWeek !== SUNDAY) {
 			addMorningEvents(events, currentDate);
 		} else {
-			// Sunday morning
 			addSundayMorning(events, currentDate);
 		}
 		
-		// Add evening/full-day events
-		const activity = tpl[dayName];
+		const activity = template[dayName];
 		if (activity) {
 			if (dayName === 'Sun') {
-				// Sunday full-day handling
 				if (activity === 'Magic Stack Full Day') {
-					events.push({
-						date: formatDate(currentDate),
-						title: 'Magic Stack Project Work',
-						description: 'Full day Magic Stack project work',
-						start_time: null,
-						end_time: null,
-						priority: 'high',
-						all_day: true
-					});
+					addFullDayEvent(events, currentDate, 'Magic Stack Project Work', 'high');
 				} else {
-					events.push({
-						date: formatDate(currentDate),
-						title: activity,
-						description: activity,
-						start_time: null,
-						end_time: null,
-						priority: 'medium',
-						all_day: true
-					});
+					addFullDayEvent(events, currentDate, activity);
 				}
 			} else {
-				// Mon-Sat evenings
-				addEvening(events, currentDate, activity);
+				addEveningEvent(events, currentDate, activity);
 			}
 		}
 		
-		// Move to next day
 		currentDate = addDays(currentDate, 1);
 		
-		// Progress indicator every 30 days
-		if (events.length > 0 && events.length % (30 * 3) === 0) {
+		if (events.length > 0 && events.length % 90 === 0) {
 			console.log(`  Generated ${events.length} events so far... (current date: ${formatDate(currentDate)})`);
 		}
 	}
 	
-	// Post-process: Ensure ALL events on Sunday are set to all_day: true
-	// EXCEPT Reading and Exercise which should remain time-bound
-	// Also ensure Saturday events are NEVER all_day (they are 5:30-11:30 PM only)
-	events.forEach(event => {
-		const eventDate = new Date(event.date + 'T00:00:00');
-		const dayOfWeek = getDayOfWeek(eventDate);
-		
-		// Saturday (day 6) - ensure evening events are NOT all_day
-		if (dayOfWeek === 6) { // Saturday
-			// Saturday evening events should be time-bound (5:30-11:30 PM)
-			// Only Reading and Exercise can be time-bound, all evening activities should have times
-			if (event.title !== 'Reading' && event.title !== 'Exercise') {
-				// Ensure Saturday evening events are NOT all_day
-				event.all_day = false;
-				// If somehow times are missing, set default Saturday times
-				if (!event.start_time || !event.end_time) {
-					event.start_time = '17:30:00';
-					event.end_time = '23:30:00';
-				}
-			}
-		}
-		
-		// Sunday (day 0) - set to all_day except Reading and Exercise
-		if (dayOfWeek === 0) { // Sunday
-			// Don't set Reading and Exercise to all-day - they have specific times
-			if (event.title !== 'Reading' && event.title !== 'Exercise') {
-				event.all_day = true;
-				event.start_time = null;
-				event.end_time = null;
-			}
-		}
-	});
-	
 	return events;
 }
-
-/* -----------------------------------------------------------
-   Seeder
------------------------------------------------------------ */
 
 async function seedEvents() {
 	try {
 		console.log('Starting to seed events from today to end of 2026...\n');
 
 		const startDate = new Date();
-		const endDate = new Date('2026-12-31');
-		
-		// Generate all events from today to end of 2026
+		const endDate = new Date(2026, 11, 31); // December 31, 2026 (month is 0-indexed)
 		const events = generateFullSchedule(startDate, endDate);
 
 		console.log(`\nGenerated ${events.length} events total.`);
@@ -384,30 +239,29 @@ async function seedEvents() {
 		try {
 			await client.query('BEGIN');
 
-			// Insert in batches to avoid parameter limits (PostgreSQL has a limit of ~65535 parameters)
-			const batchSize = 1000; // ~7000 parameters per batch (1000 events * 7 params)
+			const batchSize = 1000;
 			let totalInserted = 0;
 
 			for (let i = 0; i < events.length; i += batchSize) {
 				const batch = events.slice(i, i + batchSize);
 				const values = [];
 				const params = [];
-				let idx = 1;
+				let paramIndex = 1;
 
-				for (const e of batch) {
+				for (const event of batch) {
 					values.push(
-						`($${idx},$${idx + 1},$${idx + 2},$${idx + 3},$${idx + 4},$${idx + 5},$${idx + 6})`
+						`($${paramIndex},$${paramIndex + 1},$${paramIndex + 2},$${paramIndex + 3},$${paramIndex + 4},$${paramIndex + 5},$${paramIndex + 6})`
 					);
 					params.push(
-						e.date,
-						e.title,
-						e.description,
-						e.start_time,
-						e.end_time,
-						e.priority,
-						e.all_day
+						event.date,
+						event.title,
+						event.description,
+						event.start_time,
+						event.end_time,
+						event.priority,
+						event.all_day
 					);
-					idx += 7;
+					paramIndex += 7;
 				}
 
 				await client.query(
@@ -424,7 +278,6 @@ async function seedEvents() {
 			await client.query('COMMIT');
 			console.log(`\n✅ Successfully inserted ${totalInserted} events!`);
 
-			// Get summary statistics
 			const countResult = await client.query('SELECT COUNT(*) FROM calendar_events');
 			console.log(`📊 Total events in database: ${countResult.rows[0].count}`);
 
