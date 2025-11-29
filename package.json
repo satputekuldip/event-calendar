@@ -5,7 +5,8 @@
 	"scripts": {
 		"start": "node ./bin/www",
 		"dev": "nodemon ./bin/www",
-		"seed": "node ./seeders/seed-events.js"
+		"seed": "node ./seeders/seed-events.js",
+		"deploy": "git add . && git commit -m 'deploy' && git tag v${npm_package_version} && git push origin v${npm_package_version}"
 	},
 	"dependencies": {
 		"cookie-parser": "~1.4.4",
