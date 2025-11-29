@@ -383,3 +383,142 @@ function autoRefreshEvents() {
 // Refresh events every minute (always for today)
 setInterval(autoRefreshEvents, 60000);
 
+// --- VOICE TIME ANNOUNCEMENT ---
+
+// Number to word conversion for hours
+var HOUR_WORDS = [
+	"Twelve", "One", "Two", "Three", "Four", "Five", "Six", 
+	"Seven", "Eight", "Nine", "Ten", "Eleven"
+];
+
+// Number to word conversion for minutes
+var MINUTE_WORDS = {
+	0: "",
+	1: "Oh One",
+	2: "Oh Two",
+	3: "Oh Three",
+	4: "Oh Four",
+	5: "Oh Five",
+	6: "Oh Six",
+	7: "Oh Seven",
+	8: "Oh Eight",
+	9: "Oh Nine",
+	10: "Ten",
+	11: "Eleven",
+	12: "Twelve",
+	13: "Thirteen",
+	14: "Fourteen",
+	15: "Fifteen",
+	16: "Sixteen",
+	17: "Seventeen",
+	18: "Eighteen",
+	19: "Nineteen",
+	20: "Twenty",
+	21: "Twenty One",
+	22: "Twenty Two",
+	23: "Twenty Three",
+	24: "Twenty Four",
+	25: "Twenty Five",
+	26: "Twenty Six",
+	27: "Twenty Seven",
+	28: "Twenty Eight",
+	29: "Twenty Nine",
+	30: "Thirty",
+	31: "Thirty One",
+	32: "Thirty Two",
+	33: "Thirty Three",
+	34: "Thirty Four",
+	35: "Thirty Five",
+	36: "Thirty Six",
+	37: "Thirty Seven",
+	38: "Thirty Eight",
+	39: "Thirty Nine",
+	40: "Forty",
+	41: "Forty One",
+	42: "Forty Two",
+	43: "Forty Three",
+	44: "Forty Four",
+	45: "Forty Five",
+	46: "Forty Six",
+	47: "Forty Seven",
+	48: "Forty Eight",
+	49: "Forty Nine",
+	50: "Fifty",
+	51: "Fifty One",
+	52: "Fifty Two",
+	53: "Fifty Three",
+	54: "Fifty Four",
+	55: "Fifty Five",
+	56: "Fifty Six",
+	57: "Fifty Seven",
+	58: "Fifty Eight",
+	59: "Fifty Nine"
+};
+
+function convertTimeToSpoken(hours24, minutes) {
+	var ampm = hours24 >= 12 ? "PM" : "AM";
+	var hours12 = hours24 % 12;
+	
+	var hourWord = HOUR_WORDS[hours12];
+	var minuteWord = MINUTE_WORDS[minutes] || "";
+	
+	if (minuteWord === "") {
+		return "Time now is " + hourWord + " " + ampm;
+	} else {
+		return "Time now is " + hourWord + " " + minuteWord + " " + ampm;
+	}
+}
+
+function speakTime() {
+	var now = new Date();
+	var hours24 = now.getHours();
+	var minutes = now.getMinutes();
+	
+	var spokenText = convertTimeToSpoken(hours24, minutes);
+	
+	// Check if browser supports speech synthesis
+	if ('speechSynthesis' in window) {
+		// Cancel any ongoing speech
+		window.speechSynthesis.cancel();
+		
+		var utterance = new SpeechSynthesisUtterance(spokenText);
+		utterance.rate = 0.9; // Slightly slower for clarity
+		utterance.pitch = 1.0;
+		utterance.volume = 1.0;
+		
+		window.speechSynthesis.speak(utterance);
+	} else {
+		console.log("Speech synthesis not supported");
+		alert(spokenText);
+	}
+}
+
+// Set up button click handler
+var speakTimeBtn = document.getElementById("speak-time-btn");
+if (speakTimeBtn) {
+	speakTimeBtn.addEventListener("click", function() {
+		speakTime();
+	});
+}
+
+// Track last announcement time to avoid duplicate announcements
+var lastAnnouncedMinute = -1;
+
+// Check every minute if we should announce (at :00 and :30)
+function checkTimeAnnouncement() {
+	var now = new Date();
+	var minutes = now.getMinutes();
+	
+	// Announce at :00 and :30
+	if ((minutes === 0 || minutes === 30) && minutes !== lastAnnouncedMinute) {
+		lastAnnouncedMinute = minutes;
+		speakTime();
+	}
+}
+
+// Check every minute
+setInterval(checkTimeAnnouncement, 60000);
+
+// Initial check in case we're already at :00 or :30
+checkTimeAnnouncement();
+

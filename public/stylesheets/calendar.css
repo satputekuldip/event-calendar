@@ -60,6 +60,7 @@ body {
 	-webkit-align-items: center;
 	align-items: center;
 	background-color: #1c1c1e;
+	position: relative;
 }
 
 #time-display {
@@ -122,6 +123,39 @@ body {
 	font-weight: 700;
 	opacity: 0.9;
 	text-align: left;
+}
+
+.speak-time-btn {
+	position: absolute;
+	top: 15px;
+	right: 15px;
+	background: rgba(10, 132, 255, 0.2);
+	border: 1px solid rgba(10, 132, 255, 0.4);
+	color: #0a84ff;
+	font-size: 24px;
+	cursor: pointer;
+	padding: 8px 10px;
+	border-radius: 8px;
+	-webkit-tap-highlight-color: transparent;
+	transition: all 0.2s;
+	font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+	width: 44px;
+	height: 44px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 10;
+}
+
+.speak-time-btn:active {
+	background: rgba(10, 132, 255, 0.4);
+	border-color: rgba(10, 132, 255, 0.6);
+	transform: scale(0.95);
+}
+
+.speak-time-btn:hover {
+	background: rgba(10, 132, 255, 0.3);
+	border-color: rgba(10, 132, 255, 0.5);
 }
 
 /* Bottom Left: Month View */
