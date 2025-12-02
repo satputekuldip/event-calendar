@@ -303,6 +303,12 @@ function renderTimeline(events) {
 
 	for (var i = 0; i < events.length; i++) {
 		var e = events[i];
+		
+		// Ensure event has an ID
+		if (!e.id) {
+			console.warn("Event missing ID:", e);
+			continue; // Skip events without IDs
+		}
 
 		var item = document.createElement("div");
 		// Add priority class
@@ -333,6 +339,9 @@ function renderTimeline(events) {
 			badgeHTML = '<div class="all-day-badge">All Day</div>';
 		}
 
+		// Store event ID as data attribute
+		item.setAttribute("data-event-id", e.id);
+		
 		item.innerHTML =
 			'<div class="timeline-time">' +
 			timeHTML +
@@ -349,9 +358,31 @@ function renderTimeline(events) {
 			'<div class="timeline-duration">' +
 			durationHTML +
 			"</div>" +
+			'<button class="delete-event-btn" data-event-id="' + e.id + '" title="Delete Event">x</button>' +
 			"</div>";
 
 		container.appendChild(item);
+		
+		// Add delete button event listener
+		var deleteBtn = item.querySelector('.delete-event-btn');
+		if (deleteBtn) {
+			deleteBtn.addEventListener('click', function(e) {
+				e.stopPropagation(); // Prevent any parent click handlers
+				e.preventDefault(); // Prevent any default behavior
+				var eventId = parseInt(this.getAttribute('data-event-id'), 10);
+				console.log('Delete button clicked, event ID:', eventId);
+				if (!eventId || isNaN(eventId)) {
+					console.error('Invalid event ID:', eventId);
+					alert('Error: Invalid event ID');
+					return;
+				}
+				if (confirm('Are you sure you want to delete this event?')) {
+					deleteEvent(eventId);
+				}
+			});
+		} else {
+			console.warn('Delete button not found for event:', e.id);
+		}
 	}
 }
 
@@ -585,4 +616,227 @@ setInterval(function() {
 
 // Initial check in case we're already at :00 or :30
 checkTimeAnnouncement();
+
+// --- ADD EVENT MODAL ---
+
+var addEventBtn = document.getElementById("add-event-btn");
+var addEventModal = document.getElementById("add-event-modal");
+var closeModalBtn = document.getElementById("close-modal-btn");
+var cancelEventBtn = document.getElementById("cancel-event-btn");
+var addEventForm = document.getElementById("add-event-form");
+var allDayCheckbox = document.getElementById("event-all-day");
+var timeFields = document.getElementById("time-fields");
+var formError = document.getElementById("form-error");
+
+// Open modal
+function openAddEventModal() {
+	// Set default date to selected date or today
+	var defaultDate = selectedDate || todayDate;
+	document.getElementById("event-date").value = defaultDate;
+	
+	// Reset form
+	addEventForm.reset();
+	document.getElementById("event-date").value = defaultDate;
+	document.getElementById("event-priority").value = "medium";
+	formError.classList.remove("show");
+	formError.textContent = "";
+	
+	// Show modal
+	addEventModal.classList.add("active");
+	
+	// Update time fields visibility
+	updateTimeFieldsVisibility();
+}
+
+// Close modal
+function closeAddEventModal() {
+	addEventModal.classList.remove("active");
+	formError.classList.remove("show");
+	formError.textContent = "";
+}
+
+// Toggle time fields based on all-day checkbox
+function updateTimeFieldsVisibility() {
+	if (allDayCheckbox.checked) {
+		timeFields.classList.add("all-day-hidden");
+		document.getElementById("event-start-time").removeAttribute("required");
+		document.getElementById("event-end-time").removeAttribute("required");
+	} else {
+		timeFields.classList.remove("all-day-hidden");
+	}
+}
+
+// Event listeners for modal
+if (addEventBtn) {
+	addEventBtn.addEventListener("click", function() {
+		openAddEventModal();
+	});
+}
+
+if (closeModalBtn) {
+	closeModalBtn.addEventListener("click", function() {
+		closeAddEventModal();
+	});
+}
+
+if (cancelEventBtn) {
+	cancelEventBtn.addEventListener("click", function() {
+		closeAddEventModal();
+	});
+}
+
+// Close modal when clicking outside
+if (addEventModal) {
+	addEventModal.addEventListener("click", function(e) {
+		if (e.target === addEventModal) {
+			closeAddEventModal();
+		}
+	});
+}
+
+// Toggle time fields when all-day checkbox changes
+if (allDayCheckbox) {
+	allDayCheckbox.addEventListener("change", function() {
+		updateTimeFieldsVisibility();
+	});
+}
+
+// Handle form submission
+if (addEventForm) {
+	addEventForm.addEventListener("submit", function(e) {
+		e.preventDefault();
+		
+		// Hide previous errors
+		formError.classList.remove("show");
+		formError.textContent = "";
+		
+		// Get form data
+		var formData = {
+			date: document.getElementById("event-date").value,
+			title: document.getElementById("event-title-input").value.trim(),
+			description: document.getElementById("event-description").value.trim(),
+			priority: document.getElementById("event-priority").value,
+			all_day: allDayCheckbox.checked
+		};
+		
+		// Add times if not all-day
+		if (!formData.all_day) {
+			var startTime = document.getElementById("event-start-time").value;
+			var endTime = document.getElementById("event-end-time").value;
+			if (startTime) {
+				formData.start_time = startTime;
+			}
+			if (endTime) {
+				formData.end_time = endTime;
+			}
+		}
+		
+		// Validate required fields
+		if (!formData.date || !formData.title) {
+			showFormError("Date and title are required");
+			return;
+		}
+		
+		// Disable submit button
+		var saveBtn = document.getElementById("save-event-btn");
+		saveBtn.disabled = true;
+		saveBtn.textContent = "Saving...";
+		
+		// Send API request
+		var xhr = new XMLHttpRequest();
+		xhr.open("POST", API_URL, true);
+		xhr.setRequestHeader("Content-Type", "application/json");
+		
+		xhr.onreadystatechange = function() {
+			if (xhr.readyState === 4) {
+				saveBtn.disabled = false;
+				saveBtn.textContent = "Save Event";
+				
+				if (xhr.status === 201) {
+					// Success - close modal and refresh events
+					closeAddEventModal();
+					
+					// Refresh events for the date that was added
+					fetchEventsForDate(formData.date);
+					
+					// If the event was added for today, refresh today's view
+					if (formData.date === todayDate) {
+						// Already refreshed above
+					}
+					
+					// Re-render calendar to show any visual updates
+					generateCalendar();
+				} else {
+					// Error - show error message
+					try {
+						var errorData = JSON.parse(xhr.responseText);
+						showFormError(errorData.message || errorData.error || "Failed to create event");
+					} catch (e) {
+						showFormError("Failed to create event (" + xhr.status + ")");
+					}
+				}
+			}
+		};
+		
+		xhr.onerror = function() {
+			saveBtn.disabled = false;
+			saveBtn.textContent = "Save Event";
+			showFormError("Network error. Please try again.");
+		};
+		
+		xhr.send(JSON.stringify(formData));
+	});
+}
+
+function showFormError(message) {
+	formError.textContent = message;
+	formError.classList.add("show");
+}
+
+// Delete event function
+function deleteEvent(eventId) {
+	if (!eventId || isNaN(eventId)) {
+		console.error("Cannot delete event: invalid ID", eventId);
+		alert("Error: Invalid event ID");
+		return;
+	}
+	
+	var url = API_URL + "/" + eventId;
+	console.log("Deleting event, URL:", url);
+	
+	// Use XMLHttpRequest for better compatibility with older iPad Minis
+	var xhr = new XMLHttpRequest();
+	xhr.open("DELETE", url, true);
+	xhr.setRequestHeader("Content-Type", "application/json");
+	
+	xhr.onreadystatechange = function () {
+		if (xhr.readyState === 4) {
+			console.log("Delete response status:", xhr.status);
+			if (xhr.status === 200) {
+				console.log("Event deleted successfully");
+				// Success - refresh events for the currently selected date
+				var dateToRefresh = selectedDate || todayDate;
+				fetchEventsForDate(dateToRefresh);
+				
+				// Re-render calendar to show any visual updates
+				generateCalendar();
+			} else {
+				console.error("Delete error:", xhr.status, xhr.statusText, xhr.responseText);
+				try {
+					var errorData = JSON.parse(xhr.responseText);
+					alert("Failed to delete event: " + (errorData.message || errorData.error || "Unknown error"));
+				} catch (e) {
+					alert("Failed to delete event (" + xhr.status + "): " + xhr.statusText);
+				}
+			}
+		}
+	};
+	
+	xhr.onerror = function () {
+		console.error("Network error deleting event");
+		alert("Network error. Please try again.");
+	};
+	
+	xhr.send();
+}
 

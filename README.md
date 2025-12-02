@@ -7,8 +7,9 @@ A modern, dark-themed calendar application designed for iPad Mini, featuring a r
 ## Features
 
 - **Real-time Clock**: Large, bold digital clock with 12-hour format and leading zeros
+- **Voice Time Announcement**: Automatic time announcements every 30 minutes (at :00 and :30)
 - **Monthly Calendar View**: Interactive calendar grid highlighting the current date
-- **Event Timeline**: Vertical timeline displaying events with priority-based color coding
+- **Event Timeline**: Vertical timeline displaying events with priority-based color coding and delete functionality
 - **PostgreSQL Integration**: Robust database backend for event storage
 - **Auto-refresh**: Events automatically refresh every minute
 - **iPad Mini Optimized**: Designed specifically for iPad Mini with responsive layout
@@ -81,8 +82,7 @@ CREATE TABLE calendar_events (
     start_time TIME,
     end_time TIME,
     priority VARCHAR(20) DEFAULT 'medium',
-    all_day BOOLEAN DEFAULT false,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    all_day BOOLEAN DEFAULT false
 );
 ```
 
@@ -149,6 +149,7 @@ GET /api/events/2025-11-23
 ```json
 [
   {
+    "id": 123,
     "date": "2025-11-23",
     "title": "Drawing / Art Time",
     "description": "test",
@@ -159,6 +160,94 @@ GET /api/events/2025-11-23
   }
 ]
 ```
+
+### DELETE `/api/events/:id`
+
+Delete an event by ID.
+
+**Parameters:**
+- `id` (integer, required): Event ID
+
+**Example:**
+```bash
+DELETE /api/events/123
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "Event deleted successfully",
+  "id": 123
+}
+```
+
+**Error Responses:**
+
+- `400 Bad Request`: Invalid event ID format
+- `404 Not Found`: Event with specified ID not found
+- `500 Internal Server Error`: Database error
+
+### POST `/api/events`
+
+Create a new event manually.
+
+**Request Body:**
+- `date` (string, required): Date in YYYY-MM-DD format
+- `title` (string, required): Event title
+- `description` (string, optional): Event description
+- `start_time` (string, optional): Start time in HH:MM or HH:MM:SS format (required if not all_day)
+- `end_time` (string, optional): End time in HH:MM or HH:MM:SS format
+- `priority` (string, optional): Priority level - 'low', 'medium', or 'high' (default: 'medium')
+- `all_day` (boolean, optional): Whether event is all-day (default: false)
+
+**Example Request:**
+```bash
+POST /api/events
+Content-Type: application/json
+
+{
+  "date": "2025-11-23",
+  "title": "Drawing / Art Time",
+  "description": "Creative art session",
+  "start_time": "20:30",
+  "end_time": "23:30",
+  "priority": "medium",
+  "all_day": false
+}
+```
+
+**Example Request (All-Day Event):**
+```bash
+POST /api/events
+Content-Type: application/json
+
+{
+  "date": "2025-11-24",
+  "title": "Holiday",
+  "description": "Public holiday",
+  "all_day": true,
+  "priority": "high"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "id": 123,
+  "date": "2025-11-23",
+  "title": "Drawing / Art Time",
+  "description": "Creative art session",
+  "start_time": "20:30:00",
+  "end_time": "23:30:00",
+  "priority": "medium",
+  "all_day": false
+}
+```
+
+**Error Responses:**
+
+- `400 Bad Request`: Invalid date format, missing required fields, or invalid priority
+- `500 Internal Server Error`: Database error
 
 ## Database Schema
 
@@ -174,7 +263,6 @@ GET /api/events/2025-11-23
 | `end_time` | TIME | End time (HH:MM:SS) |
 | `priority` | VARCHAR(20) | Priority: 'low', 'medium', 'high' |
 | `all_day` | BOOLEAN | Whether event is all-day |
-| `created_at` | TIMESTAMP | Creation timestamp |
 
 ## Docker Deployment
 
@@ -226,6 +314,14 @@ Images are available at: `ghcr.io/<username>/event-calendar:v1.0.0`
 - 12-hour format with AM/PM
 - Leading zeros for single-digit hours
 - Large, bold font for wall readability
+
+### Voice Time Announcement
+- **Manual Announcement**: Click the 🔊 button to hear the current time spoken aloud
+- **Automatic Announcements**: After clicking the 🔊 button once, the app will automatically announce the time every 30 minutes (at :00 and :30)
+- **Browser Compatibility**: Works with Web Speech API (Safari, Chrome, Firefox)
+- **iPad Mini 1 Optimized**: Includes special handling for device sleep and background execution
+- **Time Format**: Announces time in natural language (e.g., "Time now is Two Thirty Five PM")
+- **Note**: User interaction (clicking the 🔊 button) is required once to enable automatic announcements due to browser security restrictions
 
 ### Calendar View
 - Current month display
