@@ -478,15 +478,31 @@ function speakTime() {
 	
 	// Check if browser supports speech synthesis
 	if ('speechSynthesis' in window) {
-		// Cancel any ongoing speech
-		window.speechSynthesis.cancel();
-		
-		var utterance = new SpeechSynthesisUtterance(spokenText);
-		utterance.rate = 0.9; // Slightly slower for clarity
-		utterance.pitch = 1.0;
-		utterance.volume = 1.0;
-		
-		window.speechSynthesis.speak(utterance);
+		try {
+			// Cancel any ongoing speech
+			window.speechSynthesis.cancel();
+			
+			// Small delay to ensure cancel completes (especially on older devices)
+			setTimeout(function() {
+				var utterance = new SpeechSynthesisUtterance(spokenText);
+				utterance.rate = 0.9; // Slightly slower for clarity
+				utterance.pitch = 1.0;
+				utterance.volume = 1.0;
+				
+				// Add error handlers
+				utterance.onerror = function(event) {
+					console.error("Speech synthesis error:", event.error);
+				};
+				
+				utterance.onend = function() {
+					console.log("Time announcement completed");
+				};
+				
+				window.speechSynthesis.speak(utterance);
+			}, 100);
+		} catch (e) {
+			console.error("Error in speakTime:", e);
+		}
 	} else {
 		console.log("Speech synthesis not supported");
 		alert(spokenText);
@@ -497,20 +513,54 @@ function speakTime() {
 var speakTimeBtn = document.getElementById("speak-time-btn");
 if (speakTimeBtn) {
 	speakTimeBtn.addEventListener("click", function() {
+		// Enable automatic announcements after first user interaction
+		// This is required because browsers block automatic speech without user interaction
+		if (!speechEnabled) {
+			speechEnabled = true;
+			console.log("Speech enabled - automatic announcements will now work");
+		}
 		speakTime();
 	});
 }
 
+// Try to enable speech automatically when page loads (may not work on all browsers)
+// But user interaction is still required for most browsers
+if ('speechSynthesis' in window) {
+	// Attempt to "warm up" speech synthesis by creating an utterance
+	// This sometimes helps on older devices
+	try {
+		var testUtterance = new SpeechSynthesisUtterance("");
+		testUtterance.volume = 0;
+		window.speechSynthesis.speak(testUtterance);
+		window.speechSynthesis.cancel();
+	} catch (e) {
+		console.log("Could not initialize speech synthesis:", e);
+	}
+}
+
 // Track last announcement time to avoid duplicate announcements
 var lastAnnouncedMinute = -1;
+// Track if speech has been enabled by user interaction (required for auto-announcements)
+var speechEnabled = false;
+// Track the last time we checked (to handle device sleep)
+var lastCheckTime = Date.now();
 
 // Check every minute if we should announce (at :00 and :30)
 function checkTimeAnnouncement() {
 	var now = new Date();
+	var currentTime = Date.now();
 	var minutes = now.getMinutes();
 	
+	// If device was asleep, reset lastAnnouncedMinute to allow announcement
+	// Check if more than 2 minutes have passed (device might have been asleep)
+	if (currentTime - lastCheckTime > 120000) {
+		lastAnnouncedMinute = -1; // Reset to allow announcement
+	}
+	lastCheckTime = currentTime;
+	
+	// Only announce if speech has been enabled (via user interaction)
 	// Announce at :00 and :30
-	if ((minutes === 0 || minutes === 30) && minutes !== lastAnnouncedMinute) {
+	if (speechEnabled && (minutes === 0 || minutes === 30) && minutes !== lastAnnouncedMinute) {
 		lastAnnouncedMinute = minutes;
 		speakTime();
 	}
@@ -518,6 +568,20 @@ function checkTimeAnnouncement() {
 
 // Check every minute
 setInterval(checkTimeAnnouncement, 60000);
+
+// Also check more frequently (every 10 seconds) to catch the exact :00 and :30 mark
+// This helps compensate for setInterval drift and device sleep issues
+setInterval(function() {
+	var now = new Date();
+	var minutes = now.getMinutes();
+	var seconds = now.getSeconds();
+	
+	// Check if we're at exactly :00 or :30 (within first 2 seconds)
+	if (speechEnabled && seconds < 2 && (minutes === 0 || minutes === 30) && minutes !== lastAnnouncedMinute) {
+		lastAnnouncedMinute = minutes;
+		speakTime();
+	}
+}, 10000);
 
 // Initial check in case we're already at :00 or :30
 checkTimeAnnouncement();
